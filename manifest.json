@@ -1,0 +1,13 @@
+{
+    "manifest_version": 2,
+    "name": "Tab origin",
+    "description": "Return to the page from which you opened this tab.",
+    "version": "0.4.1",
+    "permissions": [
+        "webNavigation",
+        "tabs"
+    ],
+    "background": {
+        "scripts": [ "remember.js" ]
+    }
+}
