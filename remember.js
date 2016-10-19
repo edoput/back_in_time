@@ -51,14 +51,12 @@ function rememberTabOrigin (details) {
   }
 }
 
-function resurrectTab () {
-  chrome.tabs.query({active: true }, (query_list) => {
-    var tabB = query_list[0];
-    if (tabB) {
-      create_options.url = previous_tab.get(tabB.id);
-      chrome.tabs.create(create_options);
-    }
-  });
+// from tabB look the tabA url, open a new tab
+function resurrectTab (tabB) {
+  if (tabB) {
+    create_options.url = previous_tab.get(tabB.id);
+    chrome.tabs.create(create_options);
+  }
 }
 
 // show the page action button when tabB 
