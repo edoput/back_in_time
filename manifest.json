@@ -1,8 +1,8 @@
 {
     "manifest_version": 2,
-    "name": "Tab origin",
+    "name": "Back in time",
     "description": "Return to the page from which you opened this tab.",
-    "version": "0.4.1",
+    "version": "1.0.0",
     "permissions": [
         "webNavigation",
         "storage",
