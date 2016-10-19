@@ -10,6 +10,9 @@ var origin_id = new Map();
 // link A.id to B.url
 var origin_url = new Map();
 
+// link B.url to A.url
+var previous_url = new Map();
+
 var url_filter = {
   url: [
     { urlMatches: /.*/ }
@@ -26,7 +29,8 @@ function loadSavedTabs (item) {
   if (chrome.runtime.lastError) {
     console.log(chrome.runtime.lastError);
   } else {
-    previous_tab = new Map(item.previous_tab)
+    previous_url = new Map(item.previous_url);
+    previous_tab = new Map(item.previous_tab);
   }
 }
 
@@ -60,12 +64,15 @@ function rememberTabOrigin (details) {
     // set the previous url
     // save (B.id, A.url)
     previous_tab.set(tab_id, origin_url.get(source_tab_id));
+    // save (B.url, A.url)
+    previous_url.set(target_url, origin_url.get(source_tab_id));
     console.log(previous_tab.get(tab_id));
     // save it to the local storage
     // will be available at next startup
     var previous_tab_url = previous_tab.get(tab_id);
     chrome.storage.local.set({
-      previous_tab: [...previous_tab]
+      previous_tab: [...previous_tab],
+      previous_url: [...previous_url]
     });
   }
 }
@@ -73,7 +80,7 @@ function rememberTabOrigin (details) {
 // from tabB look the tabA url, open a new tab
 function resurrectTab (tabB) {
   if (tabB) {
-    create_options.url = previous_tab.get(tabB.id);
+    create_options.url = previous_url.get(tabB.url);
     chrome.tabs.create(create_options);
   }
 }
@@ -81,13 +88,16 @@ function resurrectTab (tabB) {
 // show the page action button when tabB 
 // is in previous_tab
 function showPageAction (activeInfo) {
-  if (previous_tab.has(activeInfo.tabId)) {
-    chrome.pageAction.show(activeInfo.tabId);
-  } else {
-    chrome.pageAction.hide(activeInfo.tabId);
-  }
+  chrome.tabs.get(activeInfo.tabId, (tabB) => {
+    if (previous_url.has(tabB.url)) {
+      chrome.pageAction.show(activeInfo.tabId);
+    } else {
+      chrome.pageAction.hide(activeInfo.tabId);
+    }
+  });
 }
 
+// set up the webNavigation events
 chrome.webNavigation.onCreatedNavigationTarget.addListener(prepareTabOrigin)
 chrome.webNavigation.onBeforeNavigate.addListener(rememberTabOrigin)
 
