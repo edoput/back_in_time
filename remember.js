@@ -61,6 +61,21 @@ function resurrectTab () {
   });
 }
 
+// show the page action button when tabB 
+// is in previous_tab
+function showPageAction (activeInfo) {
+  if (previous_tab.has(activeInfo.tabId)) {
+    chrome.pageAction.show(activeInfo.tabId);
+  } else {
+    chrome.pageAction.hide(activeInfo.tabId);
+  }
+}
 
 chrome.webNavigation.onCreatedNavigationTarget.addListener(prepareTabOrigin)
 chrome.webNavigation.onBeforeNavigate.addListener(rememberTabOrigin)
+
+// set up when to show the pageAction
+chrome.tabs.onActivated.addListener(showPageAction);
+
+// link the click to resurrectTab
+chrome.pageAction.onClicked.addListener(resurrectTab);

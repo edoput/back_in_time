@@ -7,6 +7,11 @@
         "webNavigation",
         "tabs"
     ],
+    "page_action": {
+        "browser_style": true,
+        "default_title": "Open origin tab",
+        "default_icon": "time_machine.png"
+    },
     "background": {
         "scripts": [ "remember.js" ]
     }
