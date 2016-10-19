@@ -1,17 +1,9 @@
-// A -> B
-// link B.id to A.url
-var previous_tab = new Map();
+// link B.url to A.url
+var previous_url = new Map();
+var cleanup = new Map();
 
 // at startup recover previous data
 chrome.storage.local.get(loadSavedTabs);
-
-// link B.url to A.id
-var origin_id = new Map();
-// link A.id to B.url
-var origin_url = new Map();
-
-// link B.url to A.url
-var previous_url = new Map();
 
 var url_filter = {
   url: [
@@ -30,7 +22,6 @@ function loadSavedTabs (item) {
     console.log(chrome.runtime.lastError);
   } else {
     previous_url = new Map(item.previous_url);
-    previous_tab = new Map(item.previous_tab);
   }
 }
 
@@ -38,43 +29,19 @@ function loadSavedTabs (item) {
 // - sourceTabId
 // - url
 function prepareTabOrigin (details) {
-  // integer: The ID of the tab in which the navigation originated
-  var source_tab_id = details.sourceTabId;
-  // save where we are and our id
-  // save (A.id, A.url)
-  chrome.tabs.get(source_tab_id, (tabA) => { origin_url.set(source_tab_id, tabA.url) });
-  // string. B.url
-  var target_url = details.url;
-  // save (B.url, A.id)
-  origin_id.set(target_url, source_tab_id)
+  chrome.tabs.get(
+    details.sourceTabId,
+    (tabA) => {
+      previous_url.set(details.url, tabA.url)
+      chrome.storage.local.set({
+        previous_url: [...previous_url]
+      });
+    }
+  );
 }
 
-// details:
-// - tabId
-// - url
-function rememberTabOrigin (details) {
-  // integer: The ID of the tab in which the navigation is about to occur
-  var tab_id = details.tabId;
-  // string. The URL to which the given frame will navigate.
-  var target_url = details.url;
-  // B.url -> A.id
-  var source_tab_id = origin_id.get(target_url);
-  // does the source tab exists?
-  if (source_tab_id) {
-    // set the previous url
-    // save (B.id, A.url)
-    previous_tab.set(tab_id, origin_url.get(source_tab_id));
-    // save (B.url, A.url)
-    previous_url.set(target_url, origin_url.get(source_tab_id));
-    console.log(previous_tab.get(tab_id));
-    // save it to the local storage
-    // will be available at next startup
-    var previous_tab_url = previous_tab.get(tab_id);
-    chrome.storage.local.set({
-      previous_tab: [...previous_tab],
-      previous_url: [...previous_url]
-    });
-  }
+function prepareCleanUp (details) {
+  cleanup.set(details.tabId, details.url);
 }
 
 // from tabB look the tabA url, open a new tab
@@ -87,22 +54,37 @@ function resurrectTab (tabB) {
 
 // show the page action button when tabB 
 // is in previous_tab
-function showPageAction (activeInfo) {
-  chrome.tabs.get(activeInfo.tabId, (tabB) => {
-    if (previous_url.has(tabB.url)) {
-      chrome.pageAction.show(activeInfo.tabId);
-    } else {
-      chrome.pageAction.hide(activeInfo.tabId);
-    }
-  });
+function showPageAction (tabId, changeInfo, tabB) {
+  if (previous_url.has(tabB.url)) {
+    chrome.pageAction.show(tabId);
+  } else {
+    chrome.pageAction.hide(tabId);
+  }
+}
+
+function forgetTabOrigin (tabId) {
+
+  if (cleanup.has(tabId)) {
+     var stale_url = cleanup.get(tabId);
+     cleanup.delete(tabId);
+
+     if (previous_url.has(stale_url)) {
+       previous_url.delete(stale_url);
+     }
+  } else {
+     return;
+  }
 }
 
 // set up the webNavigation events
 chrome.webNavigation.onCreatedNavigationTarget.addListener(prepareTabOrigin)
-chrome.webNavigation.onBeforeNavigate.addListener(rememberTabOrigin)
+chrome.webNavigation.onCompleted.addListener(prepareCleanUp)
 
 // set up when to show the pageAction
-chrome.tabs.onActivated.addListener(showPageAction);
+chrome.tabs.onUpdated.addListener(showPageAction);
 
 // link the click to resurrectTab
 chrome.pageAction.onClicked.addListener(resurrectTab);
+
+// remove the link when a tab is closed
+chrome.tabs.onRemoved.addListener(forgetTabOrigin);
