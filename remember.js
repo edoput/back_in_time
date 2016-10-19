@@ -1,6 +1,10 @@
 // A -> B
 // link B.id to A.url
 var previous_tab = new Map();
+
+// at startup recover previous data
+chrome.storage.local.get(loadSavedTabs);
+
 // link B.url to A.id
 var origin_id = new Map();
 // link A.id to B.url
@@ -16,6 +20,15 @@ var create_options = {
   active: true,
   url: ''
 };
+
+
+function loadSavedTabs (item) {
+  if (chrome.runtime.lastError) {
+    console.log(chrome.runtime.lastError);
+  } else {
+    previous_tab = new Map(item.previous_tab)
+  }
+}
 
 // details:
 // - sourceTabId
@@ -48,6 +61,12 @@ function rememberTabOrigin (details) {
     // save (B.id, A.url)
     previous_tab.set(tab_id, origin_url.get(source_tab_id));
     console.log(previous_tab.get(tab_id));
+    // save it to the local storage
+    // will be available at next startup
+    var previous_tab_url = previous_tab.get(tab_id);
+    chrome.storage.local.set({
+      previous_tab: [...previous_tab]
+    });
   }
 }
 

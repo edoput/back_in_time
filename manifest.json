@@ -5,6 +5,7 @@
     "version": "0.4.1",
     "permissions": [
         "webNavigation",
+        "storage",
         "tabs"
     ],
     "page_action": {
